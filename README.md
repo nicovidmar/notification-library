@@ -4,6 +4,59 @@ Librería Java 21 para enviar notificaciones por Email, SMS, Push y Slack con un
 
 **Todos los proveedores son simulados.** Un recibo indica que el adaptador aceptó la solicitud según el protocolo modelado. No se hace HTTP ni se confirma la entrega al destinatario.
 
+## Stack tecnológico
+
+- Java 21 y Maven.
+- JUnit Jupiter para tests.
+- Docker para compilar la librería y ejecutar las demos.
+- La librería no tiene dependencias externas de ejecución ni requiere un framework.
+
+## Arquitectura y diseño
+
+Se usa arquitectura hexagonal organizada por paquetes. La aplicación invoca el puerto de entrada `NotificationClient`. El cliente resuelve el proveedor registrado y delega en el puerto de salida `NotificationSender<N>`. Cada adaptador implementa ese puerto y traduce el mensaje al protocolo de su proveedor simulado.
+
+```text
+Aplicación → NotificationClient → DefaultNotificationClient → NotificationSender<N> ← Adaptador
+                                            ↓                                         ↓
+                                    registro de rutas                         protocolo simulado
+```
+
+El dominio no depende de los adaptadores. El consumidor conecta los componentes mediante código Java. Para agregar un canal o proveedor se crean y registran sus implementaciones sin modificar la resolución del cliente.
+
+### Estructura del proyecto
+
+```text
+src/main/java/dev/challenge/notifications/
+├── api/             # Cliente síncrono y fachadas async y de observación
+├── application/     # Resolución de rutas y validación del recibo
+├── configuration/   # Builder para registrar proveedores y defaults
+├── domain/          # Contratos comunes, resultados y excepciones
+├── spi/             # Puerto de salida NotificationSender<N>
+├── channels/        # Mensajes y destinatarios por canal
+├── adapters/        # Simuladores de proveedores
+├── retry/           # Reintento explícito por composición
+└── templates/       # Sustitución simple de texto
+examples/            # Demos ejecutables fuera del JAR
+src/test/            # Tests unitarios y controles de arquitectura
+scripts/             # Verificaciones adicionales en PowerShell
+```
+
+### Patrones de diseño
+
+- **Strategy:** cada `NotificationSender<N>` encapsula una estrategia de envío para un tipo de notificación.
+- **Registry:** el cliente busca el sender registrado por tipo exacto de notificación e ID de proveedor.
+- **Builder:** `Notifications.builder()` registra proveedores y defaults y valida la composición al construir el cliente.
+- **Adapter:** cada simulador traduce los datos del canal y valida la respuesta de su proveedor.
+- **Decorator:** `RetryingSender` envuelve un sender para agregar reintentos. `ObservedNotificationClient` envuelve al cliente para observar el resultado final.
+
+### Principios SOLID
+
+- **Responsabilidad única:** los tipos de canal validan datos, el cliente resuelve rutas y cada adaptador interpreta su protocolo.
+- **Abierto/cerrado:** se pueden registrar canales y proveedores nuevos sin modificar la lógica de resolución existente.
+- **Sustitución de Liskov:** los senders deben respetar el contrato común de aceptación o excepción. SendGrid y Mailgun se prueban con un contrato compartido para Email.
+- **Segregación de interfaces:** `NotificationSender<N>` expone una única operación de envío y no exige métodos de infraestructura a todas las implementaciones.
+- **Inversión de dependencias:** el cliente depende de la interfaz `NotificationSender<N>`, mientras que los adaptadores concretos implementan esa interfaz.
+
 ## Probar en un minuto
 
 Con JDK 21 y Maven, desde la raíz:
@@ -135,10 +188,3 @@ Usá valores ficticios en las simulaciones. En un adaptador real, la aplicación
 
 La aplicación llama a [NotificationClient](src/main/java/dev/challenge/notifications/api/NotificationClient.java). El [cliente predeterminado](src/main/java/dev/challenge/notifications/application/DefaultNotificationClient.java) resuelve la ruta por tipo exacto y proveedor, invoca al [NotificationSender](src/main/java/dev/challenge/notifications/spi/NotificationSender.java) registrado y valida el recibo. Cada adaptador conoce el protocolo de su proveedor. Por ejemplo, [SimulatedSendGridSender](src/main/java/dev/challenge/notifications/adapters/sendgrid/SimulatedSendGridSender.java) traduce el email y comprueba el estado de aceptación.
 
-## Uso de IA durante el challenge
-
-Usé Codex para discutir alternativas, implementar por etapas y preparar pruebas. Primero pedí una especificación y un harness. Antes de incorporar cada opcional pedí discutir el problema, las alternativas y el costo. Dos instrucciones que guiaron el trabajo fueron «No implementar funcionalidades opcionales adicionales sin autorización» y «Antes de implementar, revisá si existe alguna contradicción con los requisitos originales y presentá una API pública mínima».
-
-Una decisión mía fue exigir un proveedor predeterminado por canal y permitir elegir otro sólo cuando hiciera falta. Otra fue simplificar los lotes: frente a una propuesta con límites separados y una ventana de admisión, elegí delegar concurrencia, espera y rechazo al Executor de Java. Acepté el costo: la cola del pool está acotada, pero la memoria del lote crece con la cantidad de entradas. Codex ayudó a implementar esa elección y probar orden, fallos parciales y rechazo.
-
-La IA también cometió errores: una edición automática alteró caracteres en documentación aunque los tests de Java pasaban. Esa experiencia mostró por qué las pruebas del código y la revisión del material de entrega son controles distintos.
