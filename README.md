@@ -187,3 +187,10 @@ Usá valores ficticios en las simulaciones. En un adaptador real, la aplicación
 
 La aplicación llama a [NotificationClient](src/main/java/dev/challenge/notifications/api/NotificationClient.java). El [cliente predeterminado](src/main/java/dev/challenge/notifications/application/DefaultNotificationClient.java) resuelve la ruta por tipo exacto y proveedor, invoca al [NotificationSender](src/main/java/dev/challenge/notifications/spi/NotificationSender.java) registrado y valida el recibo. Cada adaptador conoce el protocolo de su proveedor. Por ejemplo, [SimulatedSendGridSender](src/main/java/dev/challenge/notifications/adapters/sendgrid/SimulatedSendGridSender.java) traduce el email y comprueba el estado de aceptación.
 
+## Limitaciones y mejoras futuras
+
+- **Integraciones reales:** los proveedores están simulados. Para usarlos en producción habría que implementar transporte HTTP, autenticación, timeouts y pruebas de integración. El challenge prioriza diseño sobre conexiones reales.
+- **Confirmación de entrega:** el recibo indica aceptación por el proveedor, no entrega al destinatario. Para conocer el estado final harían falta callbacks o webhooks de cada proveedor.
+- **Reintentos:** la política actual es inmediata, limitada y opcional. Una solución de producción podría agregar esperas progresivas e idempotencia para reducir la presión sobre el proveedor y el riesgo de duplicados.
+- **Lotes grandes:** el batch intenta enviar todas sus entradas al executor. Para volúmenes altos podría procesarse por ventanas para limitar la memoria y las solicitudes pendientes.
+
