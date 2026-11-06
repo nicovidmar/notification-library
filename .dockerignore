@@ -1,0 +1,9 @@
+# Send only files needed to build this library and its demos.
+**
+!Dockerfile
+!.dockerignore
+!pom.xml
+!src/
+!src/**
+!examples/
+!examples/**
