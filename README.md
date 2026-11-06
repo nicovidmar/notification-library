@@ -38,7 +38,6 @@ src/main/java/dev/challenge/notifications/
 └── templates/       # Sustitución simple de texto
 examples/            # Demos ejecutables fuera del JAR
 src/test/            # Tests unitarios y controles de arquitectura
-scripts/             # Verificaciones adicionales en PowerShell
 ```
 
 ### Patrones de diseño
@@ -184,7 +183,7 @@ El ejemplo usa los tipos de `dev.challenge.notifications.domain`, `configuration
 
 Usá valores ficticios en las simulaciones. En un adaptador real, la aplicación debería obtener los secretos de su entorno o gestor de credenciales y pasarlos por código. No registres claves, URLs de webhook, destinatarios ni contenido. Los tipos sensibles redactan su representación de diagnóstico; eso no cifra sus valores en memoria.
 
-`mvn clean verify` ejecuta las pruebas con JUnit 5, incluida la compilación de los ejemplos y la comprobación de dependencias entre paquetes. En Windows, [verify.ps1](scripts/verify.ps1) verifica además ejemplos contra el JAR, empaquetado y Javadoc. En el cierre verificado, [verify-docker.ps1](scripts/verify-docker.ps1) construyó la imagen Linux: pasaron 284 casos en el build y las ocho demos terminaron sin red en los contenedores.
+`mvn clean verify` ejecuta las pruebas con JUnit 5, incluida la compilación de los ejemplos y la comprobación de dependencias entre paquetes. La última verificación completó 284 casos sin fallos. También se construyó la imagen Docker para Linux y se ejecutaron las ocho demos en contenedores sin red.
 
 La aplicación llama a [NotificationClient](src/main/java/dev/challenge/notifications/api/NotificationClient.java). El [cliente predeterminado](src/main/java/dev/challenge/notifications/application/DefaultNotificationClient.java) resuelve la ruta por tipo exacto y proveedor, invoca al [NotificationSender](src/main/java/dev/challenge/notifications/spi/NotificationSender.java) registrado y valida el recibo. Cada adaptador conoce el protocolo de su proveedor. Por ejemplo, [SimulatedSendGridSender](src/main/java/dev/challenge/notifications/adapters/sendgrid/SimulatedSendGridSender.java) traduce el email y comprueba el estado de aceptación.
 
